@@ -1,0 +1,42 @@
+#container {
+	width: 1400px;
+	height: 900px;
+	display: inline-block;
+    overflow-y:auto;
+}
+
+#panel {
+	width: 475px;
+	height: 900px;
+	float: right;
+	background: rgba(211,211,211,0.25);
+	border: 1px solid rgba(85,85,85,0.25);
+	z-index: -1;
+}
+
+#stat-ul {
+	float: right;
+}
+
+.name-label {
+	width: 100px;
+}
+
+.name-label:hover {
+	opacity: 0.75;
+	cursor: pointer;
+}
+
+h4 {
+	padding: 5px;
+	padding-left: 15px;
+	background-color: background: rgba(211,211,211,0.5);
+}
+
+svg {
+    background: rgba(211,211,211,0.25);
+}
+
+ul {
+	display: inline-block;
+}
