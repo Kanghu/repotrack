@@ -68,8 +68,8 @@ class Contributor:
                 nr_comments_before = sum(map(lambda com: len(com), comments_before))
                 nr_comments_after = sum(map(lambda com: len(com), comments_after))
 
-        self.contrib["COM+"] += (nr_comments_after - nr_comments_before)
-        self.contrib["COM-"] += (nr_comments_before - nr_comments_after)
+        self.contrib["COM+"] += (nr_comments_after - nr_comments_before) if (nr_comments_after - nr_comments_before) > 0 else 0
+        self.contrib["COM-"] += (nr_comments_before - nr_comments_after) if (nr_comments_before - nr_comments_after) > 0 else 0
         # Set of changed methods
         self.contrib["FUNC*"] += len(modif.changed_methods)
 
@@ -88,12 +88,14 @@ class File:
     def __init__(self, name, contributors):
         self.contributors = contributors
         self.name = name
+        self.contributors["All"] = Contributor("All", {})
 
     def addModification(self, modif, commit):
         if(commit.author.name not in self.contributors):
             self.contributors[commit.author.name] = Contributor(commit.author.name, {})
         
         self.contributors[commit.author.name].addModification(modif)
+        self.contributors['All'].addContributor(self.contributors[commit.author.name])
 
     def checkCommit(self, commit):
         for modif in commit.modifications:
@@ -118,8 +120,8 @@ class File:
             jsonStr += self.contributors[c].toJSON() 
             if i != len(self.contributors) - 1:
                 jsonStr += ','
+            i += 1
 
-                i += 1
         jsonStr += ']'
         jsonStr += '}'
 
@@ -246,10 +248,14 @@ class Package:
             return True
 
         else:
-            for c in self.childs:
-                if type(c) is Package:
-                    if c.removeEmptyFolders():
-                        self.childs.remove(c)
+            removed = []
+            for ch in self.childs:
+                if type(ch) is Package:
+                    if ch.removeEmptyFolders():
+                        removed += [ch]
+            
+            for ch in removed:
+                self.childs.remove(ch)
 
             if len(self.childs) == 0:
                 return True
@@ -279,12 +285,14 @@ class Package:
                     self.contributors[con] = Contributor(con, {})
                 self.contributors[con].addContributor(c.contributors[con])
 
+    # Compute weighted contributions amongst a repository
     def computeContributions(self):
-        totals = []
-        counter = 0
-        results = {}
+        totals = []         # Totals across each category
+        results = {}        # Final weighted results across each category
 
+        counter = 0
         for stat in Stats:
+            # Calculate totals among each statistic
             totals.append(0)
             for c in self.contributors.values():
                 totals[counter] += c.contrib[stat]
@@ -292,33 +300,43 @@ class Package:
         
         counter = 0
         for c in self.contributors.keys():
+            # Initialize result dictionary
             results[c] = []
 
         for stat in Stats:
+            # Calculate weights among each stat by division with total
             for c in self.contributors.values():
                 results[c.name].append(int(round(c.contrib[stat] / (totals[counter] + 1) * 100)))
             counter += 1
 
         return results
-        
 
-    def printSelf(self, f, offset):
-        # Print self and contributors
-        f.write("\n" + offset + "======== " + self.name + " ======== " + '(' + str(len(self.contributors)) + " contributors" + ')\n')
-        for c in self.contributors:
-             self.contributors[c].printContributor(f, offset)
+    # Assigns each contributor a value directly proportional to their involvement in one of the
+    # following roles: [developer, maintainer, manager]
+    def computeRoles(self):
+        totals = [0] * 3
+        for con in self.contributors.keys():
+            if con != 'All':
+                totals[0] += self.contributors[con].contrib['LOC+'] + self.contributors[con].contrib['FUNC+']
+                totals[1] += self.contributors[con].contrib['FUNC*'] + self.contributors[con].contrib['FUNC-']
+                totals[2] += self.contributors[con].contrib['COM+'] + self.contributors[con].contrib['LOC+.xml']
 
-        f.write('\n\n')
+        result = {}
+        for con in self.contributors.keys():
+            if con != 'All':
+                result[con] = []
+                result[con].append((self.contributors[con].contrib['LOC+'] + self.contributors[con].contrib['FUNC+']) / totals[0] * 100)
+                result[con].append((self.contributors[con].contrib['FUNC*'] + self.contributors[con].contrib['FUNC-']) / totals[1] * 100)
+                result[con].append((self.contributors[con].contrib['COM+'] + self.contributors[con].contrib['LOC+.xml']) / totals[2] * 100)
 
-        # Recursively print childs
-        for ch in self.childs:
-            ch.printSelf(f, offset + '\t')
-            f.write('\n')
+        return result
 
     def toJSON(self):
+        # Start of JSON object
         jsonStr = '{'
         jsonStr += '\"name\"' + ':' + '\"' + self.name + '\",'
 
+        # JSON stringify contributors
         jsonStr += '\"contributors\"' + ':' + '['   
         i = 0
         for c in self.contributors:
@@ -328,6 +346,7 @@ class Package:
             i += 1
         jsonStr += '],'
 
+        # JSON stringify children recursively
         jsonStr += '\"children\"' + ':' + '['   
         for i in range(0, len(self.childs)):
             jsonStr += self.childs[i].toJSON() 
@@ -335,7 +354,9 @@ class Package:
                 jsonStr += ','
             i += 1
         jsonStr += ']'
-
+        # End of JSON object
         jsonStr += '}'
 
-        return jsonStr
+        # Format the resulting string appropriately
+        dump = json.loads(jsonStr)
+        return json.dumps(dump, indent=4)
