@@ -1,25 +1,47 @@
 #container {
-	width: 1400px;
-	height: 900px;
+	width: 1275px;
+	height: 875px;
 	display: inline-block;
     overflow-y:auto;
 }
 
 #panel {
-	width: 475px;
-	height: 900px;
+	width: 600px;
+	height: 875px;
 	float: right;
-	background: rgba(211,211,211,0.25);
+	background: rgba(240, 248, 255, 0.5);
 	border: 1px solid rgba(85,85,85,0.25);
 	z-index: -1;
+	overflow-y:auto;
 }
 
 #stat-ul {
 	float: right;
+	margin-right: 100px;
+}
+
+#contrib-panel {
+	width: 275px;
+	height: 375px;
+	overflow-y:auto;
+	display: inline-block;
+}
+
+#stat-panel {
+	padding-left: 15px;
+	width: 275px;
+	height: 375px;
+	overflow-y:auto;
+	display: inline-block;
+}
+
+
+#settings {
+	padding: 5px;
 }
 
 .name-label {
-	width: 100px;
+	width: 125px;
 }
 
 .name-label:hover {
@@ -27,9 +49,11 @@
 	cursor: pointer;
 }
 
+.time-settings {
+}
+
 h4 {
-	padding: 5px;
-	padding-left: 15px;
+	padding: 2px;
 	background-color: background: rgba(211,211,211,0.5);
 }
 
