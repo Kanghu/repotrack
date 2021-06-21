@@ -37,11 +37,14 @@
   
 		<div id="panel">
 			<div id="settings">
-				<input type="radio" value="weighted" name="mode" checked>
-				  <label for="weighted">Weighted</label><br>
-				<input type="radio" value="total" name="mode">
-				  <label for="total">Total</label><br>
-				<hr/>
+				<!-- Toggle menu for visualization mode -->
+				<div class="mode-settings">
+					<input type="radio" value="weighted" name="mode" checked>
+					  <label for="weighted">Weighted</label><br>
+					<input type="radio" value="total" name="mode">
+					  <label for="total">Total</label><br>
+				</div>
+				<!-- Toggle menu for time interval -->
 				<div class="time-settings">
 					<input type="radio" value="all" name="time" checked>
 					  <label for="weighted">All</label><br>
@@ -50,7 +53,10 @@
 				</div>
 				<hr/>
 			 </div>
-			
+			 
+			<!-- Input for uploading file -->
+			<input type="file" id="input" multiple>
+
 			<center><h3 id="repo-name">Repository</h3></center>
 			
 			<div id="contrib-panel">
@@ -65,9 +71,9 @@
 				</ul>
 			</div>
 		</div>
+		
+		<hr />
 	</div>
-  
-	<input type="file" id="input" multiple>
 
 <!-- load the d3.js library -->	
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
@@ -180,8 +186,10 @@ var diagonal = d3.svg.diagonal()
 var svg = d3.select("#container").append("svg")
 	.attr("width", width + margin.right + margin.left)
 	.attr("height", height + margin.top + margin.bottom)
+	.attr("class", "graph-svg")
   .append("g")
 	.attr("transform", "translate(" + width/2 + "," + height/2 + ")");
+	
 
 root = treeData[0];
 root.x0 = height / 2;
@@ -198,6 +206,7 @@ var panelHeight = 750;
 var barSvg = d3.select("#panel").append("svg")
 	.attr("width", panelWidth)
 	.attr("height", panelHeight)
+	.attr("class", "svg")
   .append("g")
 	.attr("transform", "translate(" + 150 + "," + 75 + ")");
 
@@ -221,6 +230,7 @@ var chartHeight = 500;
 var chartSvg = d3.select("#panel").append("svg")
 	.attr("width", chartWidth)
 	.attr("height", chartHeight)
+	.attr("class", "svg")
   .append("g")
 	.attr("transform", "translate(" + 150 + "," + 75 + ")");
 
@@ -250,6 +260,13 @@ function handleFiles() {
 	d3.select('#container').select('svg')
 	   .attr("width", width)
 	   .attr("height", height)
+	   
+	d3.select('#container').select('svg').select('g')
+	   .attr("transform", "translate(" + width/2 + "," + height/2 + ")");
+	 
+	var offset_x = 400, offset_y = 300
+	document.getElementById('container')
+		.scrollTo(width/2 - offset_x, height/2 - offset_y)
 	   
 	 collapseAll();
   };
@@ -394,6 +411,8 @@ function togglePanel(d) {
 	var contributors = d.contributors
 	var ul = d3.select('#panel').select('ul')
 	var statUl = d3.select('#panel').select('#stat-ul')
+	
+	stats = stats.filter(s => contributors.map(c => c.contrib[s]).reduce((a, b) => a + b, 0) > 0)
 	
 	if(timeMode == 'recent') {
 		contributors = contributors.filter(c => Object.values(c.contrib_recent).reduce((a, b) => a + b, 0) > 0)

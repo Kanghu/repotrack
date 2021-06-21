@@ -25,6 +25,8 @@
 	height: 375px;
 	overflow-y:auto;
 	display: inline-block;
+	
+	border-right: 1px solid rgba(85,85,85,0.25);
 }
 
 #stat-panel {
@@ -40,6 +42,25 @@
 	padding: 5px;
 }
 
+#repo-name {
+	background-color: rgba(135, 206, 250, 0.15);
+	padding: 5px;
+	border-bottom: 1px solid rgba(85,85,85,0.25);
+	border-top: 1px solid rgba(85,85,85,0.25);
+}
+
+#input {
+	padding: 5px;
+}
+
+.graph-svg {
+	background-color: rgba(175, 196, 225, 0.1);
+}
+
+.info-svg {
+	fill: transparent;
+}
+
 .name-label {
 	width: 125px;
 }
@@ -50,11 +71,31 @@
 }
 
 .time-settings {
+	display: inline-block;
+	float: right;
+}
+
+.mode-settings {
+	display: inline-block;
+	
+}
+
+.svg {
+	background-color: rgba(240, 248, 255, 0.5);
+}
+
+label {
+	font-family: "Verdana";
+}
+
+h3 {
+	font-family: "Verdana";
 }
 
 h4 {
 	padding: 2px;
 	background-color: background: rgba(211,211,211,0.5);
+	font-family: "Verdana";
 }
 
 svg {
@@ -63,4 +104,8 @@ svg {
 
 ul {
 	display: inline-block;
+}
+
+li {
+	font-family: "Verdana";
 }
