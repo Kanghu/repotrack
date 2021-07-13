@@ -147,29 +147,29 @@ function toggle(d) {
 
 // Toggle children on click.
 function click(d) {
-  if (d.children) {
+	if (d.children) {
 		d._children = d.children;
 		d.children = null;
-  } else {
+	} else {
 		d.children = d._children;
 		d._children = null;
 
 		if(d.children != undefined && d.children.length == 1) {
 			toggle(d.children[0])
 		}
-  }
-  update(d);
+	}
+	update(d);
 
-  // Show contributions
-  togglePanel(d);
-	togglePanelChart(computePackageStats(d));
+	// Show contributions
+	togglePanel(d);
+	toggleCohesionChart(barSvg, computePackageStats(d));
 
-  // Update the current selection variables
-  currentNode = d.name
-  if(currentPanel == 'metric') {
+	// Update the current selection variables
+	currentNode = d.name
+	if(currentPanel == 'metric') {
 		toggleStat(d.contributors, currentSelection)
-  }
-  document.getElementById('repo-name').innerHTML = currentNode
+	}
+	document.getElementById('repo-name').innerHTML = currentNode
 }
 
 /* Collapse a specific node */
@@ -230,8 +230,6 @@ function togglePanel(d) {
 
 function toggleContributor(contributor, contributors) {
 	currentPanel = 'contributor'
-	// Clean the SVG
-	barSvg.selectAll("*").remove()
 
 	// Process data => Split into direct/aggregated metrics
 	if(timeMode == 'all') {
@@ -260,42 +258,17 @@ function toggleContributor(contributor, contributors) {
 		}
 	});
 
-	// Scale the range of the data
-	y.domain(barData.map(function(d) { return d.key; }));
-	x.domain([0, d3.max(barData, function(d) { return d.value; })]);
+	prepareChart(barSvg, barData)
+	toggleAggregationChart(chartSvg, computeAggregatedMetrics(contributor.contrib, contributors.filter(c => c.name == 'All')[0].contrib))
 
-	// Specify how the X axis should be rendered
-	barSvg.append("g")
-	  .attr("class", "y axis")
-	  .call(yAxis)
-	.append("text")
-	  .attr("transform", "rotate(-90)")
-	  .attr("dy", ".71em")
-	  .style("text-anchor", "end");
-
-	// Specify how the Y axis should be rendered
-	barSvg.append("g")
-	  .attr("class", "x axis")
-	  .attr("transform", "translate(0," + panelHeight / 2 + ")")
-	  .call(xAxis)
-	.selectAll("text")
-	  .style("text-anchor", "end")
-	  .attr("dx", "+.15em")
-	  .attr("dy", "+.85em")
-	  .attr("transform", "rotate(-45)" );
-
-	// Add the coloured bar charts
-	barSvg.selectAll("bar")
-	  .data(barData)
-	.enter().append("rect")
-	  .attr("class", "bar")
-	  .attr("y", function(d) { return y(d.key) })
-	  .attr("width", function(d) { return x(d.value); })
-	  .attr("x", function(d) { return 0; })
-	  .attr("height", y.rangeBand())
-	  .attr("fill", function(d) { return d3.entries(StatColors).filter(e => e.key == d.key).map(e => e.value)[0]; });
-
-	togglePanelChart(computeAggregatedMetrics(contributor.contrib, contributors.filter(c => c.name == 'All')[0].contrib))
+	if(barData.length == 0) {
+		// Add text describing empty graph
+		barSvg.append("g")
+			.attr("transform", "translate(-25,-25)")
+		.append("text")
+			.style("font-size", "16px")
+			.text("Nothing to show");
+	}
 }
 
 function toggleStat(contributors, stat) {
@@ -317,9 +290,6 @@ function toggleStat(contributors, stat) {
 		contrib[i].value += entries.filter(e => e.key == stat).map(e => e.value)[0];
 	}
 
-	// Clean SVG
-	barSvg.selectAll("*").remove()
-
 	barData = contrib;
 	// Collect the 'All' contributor
 	all = barData.filter(c => c.key == 'All').map(c => c.value)[0]
@@ -340,92 +310,99 @@ function toggleStat(contributors, stat) {
 	barData.sort((a, b) => (a.value > b.value) ? -1 : 1)
 	barData = barData.slice(0, 12)
 
-	// Scale the range of the data
-	y.domain(barData.map(function(d) { return d.key; }));
-	x.domain([0, d3.max(barData, function(d) { return d.value; })]);
-
-	// Specify how the X axis should be rendered
-	barSvg.append("g")
-	  .attr("class", "y axis")
-	  .call(yAxis)
-	.append("text")
-	  .attr("transform", "rotate(-90)")
-	  .attr("dy", ".71em")
-	  .style("text-anchor", "end");
-
-	// Specify how the Y axis should be rendered
-	barSvg.append("g")
-	  .attr("class", "x axis")
-	  .attr("transform", "translate(0," + panelHeight / 2 + ")")
-	  .call(xAxis)
-	.selectAll("text")
-	  .style("text-anchor", "end")
-	  .attr("dx", "+.15em")
-	  .attr("dy", "+1.25em")
-	  .attr("transform", "rotate(-45)" );
-
-	// Add panel
-	barSvg.selectAll("bar")
-	  .data(barData)
-	.enter().append("rect")
-	  .attr("class", "bar")
-	  .attr("y", function(d) { return y(d.key) })
-	  .attr("width", function(d) { return x(d.value); })
-	  .attr("x", function(d) { return 0; })
-	  .attr("height", y.rangeBand())
-	  .attr("fill", function(d) { return 'deepskyblue'; });
+	prepareChart(barSvg, barData)
 }
 
-function togglePanelChart(contrib) {
-	// Clean the SVG
-	chartSvg.selectAll("*").remove()
-	
+function toggleCohesionChart(chart, contribution) {
 	// Process data
-	barData = d3.entries(contrib)
+	barData = d3.entries(contribution)
 	barData.forEach(function(d) {
 		d.key = d.key;
 		d.value = +d.value;
 	});
 
+	prepareChart(chart, barData)
+
+	// Specify how the X axis should be rendered
+	chart.append("g")
+		.attr("transform", "translate(-25,-25)")
+	.append("text")
+		.style("font-size", "16px")
+		.text("Avg. contribution of top 10% developers within this package");
+}
+
+function toggleAggregationChart(chart, data) {
+	// Process data
+	barData = d3.entries(data)
+	barData.forEach(function(d) {
+		d.key = d.key;
+		d.value = +d.value;
+	});
+
+	prepareChart(chart, barData)
+
+	// Specify how the X axis should be rendered
+	chart.append("g")
+		.attr("transform", "translate(-25,-25)")
+	.append("text")
+		.style("font-size", "16px")
+		.text("Aggregated contribution of selected contributor:");
+}
+
+
+/***
+	Prepare the given chart for visually displaying the passed data.
+	Data will be visualized as a bar chart with 2 axis.
+***/
+function prepareChart(chart, data) {
+	// Clean the SVG
+	chart.selectAll("*").remove()
+
 	// Scale the range of the data
 	y.domain(barData.map(function(d) { return d.key; }));
 	x.domain([0, d3.max(barData, function(d) { return d.value; })]);
 
 	// Specify how the X axis should be rendered
-	chartSvg.append("g")
-		.attr("transform", "translate(-25,-25)")
+	chart.append("g")
+		.attr("class", "y axis")
+		.call(yAxis)
 	.append("text")
-		.style("font-size", "16px")
-		.text("Avg. contribution of top 10% developers within this package");
-
-	// Specify how the X axis should be rendered
-	chartSvg.append("g")
-	  .attr("class", "y axis")
-	  .call(yAxis)
-	.append("text")
-	  .attr("transform", "rotate(-90)")
-	  .attr("dy", ".71em")
-	  .style("text-anchor", "end");
+		.attr("transform", "rotate(-90)")
+		.attr("dy", ".71em")
+		.style("text-anchor", "end");
 
 	// Specify how the Y axis should be rendered
-	chartSvg.append("g")
-	  .attr("class", "x axis")
-	  .attr("transform", "translate(0," + panelHeight / 2 + ")")
-	  .call(xAxis)
+	chart.append("g")
+		.attr("class", "x axis")
+		.attr("transform", "translate(0," + panelHeight / 2 + ")")
+		.call(xAxis)
 	.selectAll("text")
-	  .style("text-anchor", "end")
-	  .attr("dx", "+.15em")
-	  .attr("dy", "+.85em")
-	  .attr("transform", "rotate(-45)" );
+		.style("text-anchor", "end")
+		.attr("dx", "+.15em")
+		.attr("dy", "+.85em")
+		.attr("transform", "rotate(-45)" );
+		
+	colour = d3.entries(StatColors)
 
 	// Add the coloured bar charts
-	chartSvg.selectAll("bar")
-	  .data(barData)
+	chart.selectAll("bar")
+		.data(barData)
 	.enter().append("rect")
-	  .attr("class", "bar")
-	  .attr("y", function(d) { return y(d.key) })
-	  .attr("width", function(d) { return x(d.value); })
-	  .attr("x", function(d) { return 0; })
-	  .attr("height", y.rangeBand())
-	  .attr("fill", function(d) { return d3.entries(StatColors).filter(e => e.key == d.key).map(e => e.value)[0]; });
+		.attr("class", "bar")
+		.attr("y", function(d) { return y(d.key) })
+		.attr("width", function(d) { return x(d.value); })
+		.attr("x", function(d) { return 0; })
+		.attr("height", y.rangeBand())
+		.attr("fill", "lightblue")
+		.attr("fill", 
+			function(d) { 
+				if(colour.filter(e => e.key == d.key).length > 0) {
+					return colour.filter(e => e.key == d.key).map(e => e.value)[0];
+				} else {
+					return "cornflowerblue";
+				}
+			}
+		);
+		
+
 }
