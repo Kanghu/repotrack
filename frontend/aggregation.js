@@ -62,7 +62,13 @@ function computePackageStats(node) {
 	// Divide back to obtain average
 	for(const stat in avg) {
 			avg[stat] = avg[stat] / children.length
+			avg[stat] = avg[stat] * 100.0
+			
+			if(avg[stat] > 100.0) {
+				// Malformed calculation, totals cannot exceed 100%
+				avg[stat] = 100.0
+			}
 	}
-  console.log(avg)
+	console.log(avg)
 	return avg
 }

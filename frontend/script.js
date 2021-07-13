@@ -140,7 +140,8 @@ var barSvg = d3.select("#panel").append("svg")
 	.attr("height", panelHeight)
 	.attr("class", "svg")
   .append("g")
-	.attr("transform", "translate(" + 150 + "," + 75 + ")");
+	.attr("transform", "translate(" + 175 + "," + 75 + ")");
+
 
 // Set the ranges
 var x = d3.scale.linear().range([0, panelWidth / 2]);
