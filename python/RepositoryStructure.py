@@ -7,14 +7,17 @@ import pytz
 from pydriller import GitRepository;
 from pydriller import RepositoryMining;
 from pydriller import ModificationType;
-
-from Config import Extensions, Stats, CommentsRegExp, Ignore, Backend, Frontend, Configs
 from pydriller import ModificationType;
+
+# Configuration import
+from Config import Extensions, Stats, CommentsRegExp, Ignore, Backend, Frontend, Configs
 
 # Ease access to pytz' UTC converter
 utc = pytz.UTC
 
 # Compares two method lists and returns a tuple T(#methods_added, #methods_removed)
+# where 'methods_added' represents the set of methods present within the second list but not within the first
+# and 'methods_removed' represents the set of methods present within the first list but not within the second
 def compareMethodList(before, after):
     added, removed = 0, 0
     for func in before:
@@ -27,13 +30,13 @@ def compareMethodList(before, after):
 
     return (added, removed)
 
-class Method:
-    def __init__(self, name):
-        pass
-
-# A contributor is represented by a name and dictionary of metrics
+# The contributor essentially captures all metrics ('contrib') attained by a 
+# specific developer (as identified by 'name') within a node of the repository 
+# (file or package). 
 class Contributor:
-    # Contributor constructor
+
+    # Contributor constructor. A contributor is initialized through a specified name
+    # and hashmap of contributions (usually set as empty)
     def __init__(self, name, contrib):
         self.contrib = contrib
         self.contrib_recent = {}
@@ -48,18 +51,14 @@ class Contributor:
             if stat not in self.contrib_recent:
                 self.contrib_recent[stat] = 0
 
-    # Initialize a new type of metric in the contribution dictionary
-    def init_metric(self, metric_name):
-        self.contrib[metric_name] = 0
-
-    # Add another contributor's statistics to self contribution
+    # Add another contributor's statistics to the current contributor
     def add_contributor(self, contributor):
         for stat in Stats:
             self.contrib[stat] += contributor.contrib[stat]
             self.contrib_recent[stat] += contributor.contrib_recent[stat]
 
     # Update this contributor's metrics according to a modification authored by it.
-    # We maintain a separate contribution map for the past 'recent_months'.
+    # We maintain a separate contribution map for the past 'recent_months' (set by default to 6).
     def add_modification(self, modif, commit, recent_months=6):
         isRecent = commit.author_date > utc.localize(datetime.datetime.now() - datetime.timedelta(days=recent_months * 30))
         if isRecent:
@@ -67,6 +66,8 @@ class Contributor:
 
         self.extract_metrics(modif, self.contrib)
 
+    # Extract metrics from a given pydriller Modification object. The method assumes the modification's author
+    # to be the current contributor
     def extract_metrics(self, modif, contribution_map):
         # Lines of code added/removed (LOC +/-)
         contribution_map["LOC+"] += modif.added
@@ -81,7 +82,7 @@ class Contributor:
         # Lines of code added/removed for each type of found extension (LOC.ext +/-)
         ext = modif.filename[modif.filename.find('.') if modif.filename.find('.') > 0 else 0 : len(modif.filename)]
         if ext not in contribution_map: 
-            self.init_metric("LOC+" + ext)
+            contribution_map["LOC+" + ext] = 0
         contribution_map["LOC+" + ext] += modif.added
         # Lines of comments added/removed (COM +/-)
         # Extract the nr. of comments according to the file's extension and predefined regexp
@@ -108,9 +109,10 @@ class Contributor:
     def toJSON(self):
         return json.dumps(self.__dict__)
 
-# Files represent leaf nodes within our tree repository. These are the only nodes that are properly affected
-# by modifications. (Whereas packages recursively infer their state from child nodes)
+# Files represent leaf nodes within our tree repository. These are the only nodes that are "properly" affected
+# by modifications. Packages recursively infer their associated contributors by parsing all child leaf nodes.
 class File:
+
     def __init__(self, name, contributors):
         self.contributors = contributors
         self.name = name
@@ -124,7 +126,7 @@ class File:
         self.contributors[commit.author.name].add_modification(modif, commit)
         self.contributors['All'].add_modification(modif, commit)
 
-    # Add a Contributor object to this file's contributor list
+    # Add a Contributor object to this file's known contributor list
     def add_contributor(self, contrib):
         self.contributors[contrib.name] = contrib
 
@@ -146,6 +148,7 @@ class File:
 
         return jsonStr
 
+# Packages represent non-leaf nodes within our tree repository. 
 class Package:
     def __init__(self, name, contributors, childs):
         self.contributors = contributors
@@ -220,6 +223,7 @@ class Package:
 
                 self.childs.append(child)
 
+    # Add a child file to this node 
     def addChildFile(self, filename, file):
         parts = filename.split("\\")
         
@@ -257,7 +261,8 @@ class Package:
                 if c.name == parts[len(parts) - 1]:
                     root.childs.remove(c)
         else:
-            raise ValueError("Removal failed due to null root")
+            # raise ValueError("Removal failed due to null root")
+            return
 
     # Check and remove folders which are empty (recursively)
     def removeEmptyFolders(self):
@@ -279,6 +284,7 @@ class Package:
 
         return False
 
+    # Rename a child of this node
     def renameChild(self, old_path, new_path):
         child = self.getChildByPath(old_path)
         self.addChild(new_path)
@@ -291,7 +297,7 @@ class Package:
         # Remove reference to old path
         self.removeChild(old_path)
 
-    # Infer the state of this package recursively
+    # Infer the state of this package recursively from its child nodes
     def infer_state(self):
         for c in self.childs:
             if(type(c) is Package):
@@ -302,7 +308,7 @@ class Package:
                     self.contributors[con] = Contributor(con, {})
                 self.contributors[con].add_contributor(c.contributors[con])
 
-    # Compute weighted contributions amongst a repository
+    # Compute weighted contributions amongst the current repository
     def computeContributions(self):
         totals = []         # Totals across each category
         results = {}        # Final weighted results across each category
@@ -385,21 +391,21 @@ class Package:
         dump = json.loads(jsonStr)
         return json.dumps(dump, indent=4)
 
-# Wrapper for a repository. Includes utility methods for processing git repositories
+# Wrapper for a proper repository project. Includes utility methods for processing git repositories
 class Repository(Package):
+
     # Process a git repository from a given location (URL / local file)
     def process_repository(self, loc, branch='master', recent_months=6):
         self.process_commits(RepositoryMining(loc, only_in_branch=branch).traverse_commits())
 
-    # Process a given list of commits into a contributory repository
+    # Process a given list of commits into a full fledged Repository object
     def process_commits(self, commits, recent_months=6):
         for commit in commits:
-            # For now we only analyze commits in the main branch
-            if commit.in_main_branch:
-                for modif in commit.modifications:
-                    self.process_modif(modif, commit)
+            for modif in commit.modifications:
+                self.process_modif(modif, commit)
 
-    # Process a single modification by collecting contributions & updating tree structure
+    # Process a single modification by collecting all its associated contributions & updating
+    # the project's structure accordingly (e.g. structural changes such as file addition or deletion)
     def process_modif(self, modif, commit):
          old_path = modif.old_path
          path = modif.new_path
@@ -408,16 +414,12 @@ class Repository(Package):
          if change is ModificationType.ADD:
              self.addChild(path)
              self.add_modification(modif, commit)
-             print("\n Added " + modif.new_path)
          elif change is ModificationType.DELETE:
              self.removeChild(modif.old_path)
-             print("\n Deleted " + modif.old_path)
          elif change is ModificationType.MODIFY:
              if self.getChildByPath(path) is None:
-                 print("Not found.. " + path)
+                 print("File not found.. " + path)
              else:
-                 print("\n Modified " + modif.new_path)
                  self.add_modification(modif, commit)
          elif change is ModificationType.RENAME:
             self.renameChild(old_path, path)
-            print("\n +++Renamed " + modif.old_path + " to " + modif.new_path)

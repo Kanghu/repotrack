@@ -1,3 +1,7 @@
+/***
+	This script handles the aggregation methods for collected metrics.
+***/
+
 Configs = [".xml", ".yaml", ".md", ".gitignore", ".ini", ".cfg", ".json"]
 
 // Compute aggregated metrics for a certain contributor
@@ -81,10 +85,8 @@ function computePackageStats(node) {
 					avg[stat] += contrib[stat]
 			}
 
-			console.log(contrib['LOC+'])
 	}
 
-	console.log(avg)
 	// Divide back to obtain average
 	for(const stat in avg) {
 			avg[stat] = avg[stat] / len_childs
@@ -95,6 +97,7 @@ function computePackageStats(node) {
 				avg[stat] = 100.0
 			}
 	}
+	
 	console.log(avg)
 	return avg
 }
