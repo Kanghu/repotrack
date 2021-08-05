@@ -1,3 +1,9 @@
+/***
+	This represents the main script of the frontend, responsible for initializing the
+	D3.js library and setting up the graphical devices (collapsible tree, barcharts)
+	that we are employing in our application
+***/
+
 
 // *************** Global variables **********************
 var graphMode = 'weighted'
@@ -8,22 +14,24 @@ var currentNode = ''
 
 var AggregatedMetrics = ["Engineering", "Re-engineering", "Management"]
 
-// Colors for stats
+/* Color pallete for bar chart statistics */
 var StatColors = {
-	"LOC+":"skyblue",
-	"LOC-":"crimson",
-	"FUNC+":"darkslategray",
-	"FUNC-":"indianred",
-	"COM+":"lightgreen",
-	"COM-":"fuchsia",
-	"FUNC*":"purple",
+	"LOC+":"rgb(55,126,184)",
+	"LOC-":"rgb(228,26,28)",
+	"FUNC+":"rgb(77,175,74)",
+	"FUNC-":"rgb(152,78,163)",
+	"COM+":"rgb(255,127,0)",
+	"COM-":"rgb(255,255,51)",
+	"FUNC*":"rgb(166,86,40)",
+	"<ModificationType.ADD: 1>":"rgb(247,129,191)",
+	"<ModificationType.MODIFY: 5>":"rgb(106,61,154)",
 
-	"Engineering":"blue",
-	"Re-engineering":"green",
-	"Management":"red"
+	"Engineering":"rgb(27,158,119)",
+	"Re-engineering":"rgb(217,95,2)",
+	"Management":"rgb(117,112,179)"
 }
 
-// Stub data
+/* Some sample data.. */
 var treeData =
 [
 	{
@@ -95,6 +103,7 @@ var treeData =
 	}
 ]
 
+// Initialize DOM elements (fileHandler, radio listeners)
 init_DOM()
 
 // ************** Generate the tree diagram	 *****************
