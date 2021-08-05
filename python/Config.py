@@ -1,3 +1,5 @@
+# Configuration file for representing supported file formats, metrics and comment capturing regular expressions
+
 from pydriller import ModificationType
 
 # We classify extensions under these rough categories
