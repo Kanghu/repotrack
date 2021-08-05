@@ -1,3 +1,7 @@
+/***
+	This script represents the boilerplate code for initializing the collapsible tree,
+	its transitions and states.
+***/
 
 // ************** Method for initializing DOM *****************************
 function init_DOM() {
@@ -26,26 +30,39 @@ function init_DOM() {
 	  reader.onload = function(e) {
 	    treeData = [JSON.parse(e.target.result)]
 
-		root = treeData[0];
-		root.x0 = height / 2;
-		root.y0 = 0;
+			root = treeData[0];
+			root.x0 = height / 2;
+			root.y0 = 0;
 
-		update(root);
+			update(root);
 
-		var nodes = tree.nodes(root)
-		var width = tree.nodeSize()[0] * nodes.length;
-		var height = tree.nodeSize()[1] * nodes.length;
+			/!** This part computes contribution distribution among leaf nodes **/
+			// Obtain the list of all leaves
+			var leaves = tree.nodes(root)
+			leaves = leaves.filter(function(d) {
+				return d.children == null;
+			});
+			// Append to master object
+			var master = new Object()
+			master.children = leaves
+			master.contributors = root.contributors
+			computePackageStats(master)
+			console.log(master)
 
-		d3.select('#container').select('svg')
-		   .attr("width", width)
-		   .attr("height", height)
+			var nodes = tree.nodes(root)
+			var width = tree.nodeSize()[0] * nodes.length;
+			var height = tree.nodeSize()[1] * nodes.length;
 
-		d3.select('#container').select('svg').select('g')
-		   .attr("transform", "translate(" + width/2 + "," + height/2 + ")");
+			d3.select('#container').select('svg')
+			   .attr("width", width)
+			   .attr("height", height)
 
-		var offset_x = 400, offset_y = 300
-		document.getElementById('container')
-			.scrollTo(width/2 - offset_x, height/2 - offset_y)
+			d3.select('#container').select('svg').select('g')
+			   .attr("transform", "translate(" + width/2 + "," + height/2 + ")");
+
+			var offset_x = 400, offset_y = 300
+			document.getElementById('container')
+				.scrollTo(width/2 - offset_x, height/2 - offset_y)
 
 		 collapseAll();
 	  };
@@ -138,6 +155,11 @@ function update(source) {
 	d.x0 = d.x;
 	d.y0 = d.y;
   });
+
+	// var master = new Object()
+	// master.name = "master"
+	// master.children = tree.leaves()
+	// computePackageStats(master)
 }
 
 function toggle(d) {
@@ -257,6 +279,8 @@ function toggleContributor(contributor, contributors) {
 			}
 		}
 	});
+
+	console.log(barData)
 
 	prepareChart(barSvg, barData)
 	toggleAggregationChart(chartSvg, computeAggregatedMetrics(contributor.contrib, contributors.filter(c => c.name == 'All')[0].contrib))
@@ -381,7 +405,7 @@ function prepareChart(chart, data) {
 		.attr("dx", "+.15em")
 		.attr("dy", "+.85em")
 		.attr("transform", "rotate(-45)" );
-		
+
 	colour = d3.entries(StatColors)
 
 	// Add the coloured bar charts
@@ -394,8 +418,8 @@ function prepareChart(chart, data) {
 		.attr("x", function(d) { return 0; })
 		.attr("height", y.rangeBand())
 		.attr("fill", "lightblue")
-		.attr("fill", 
-			function(d) { 
+		.attr("fill",
+			function(d) {
 				if(colour.filter(e => e.key == d.key).length > 0) {
 					return colour.filter(e => e.key == d.key).map(e => e.value)[0];
 				} else {
@@ -403,6 +427,6 @@ function prepareChart(chart, data) {
 				}
 			}
 		);
-		
+
 
 }
