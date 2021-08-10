@@ -1,3 +1,4 @@
+# Standard dependencies
 import codecs;
 import sys;
 import json;
@@ -8,26 +9,39 @@ from pydriller import RepositoryMining;
 from pydriller import ModificationType;
 
 # Internal data structure
-from RepositoryStructure import Contributor
-from RepositoryStructure import File
-from RepositoryStructure import Package
-from RepositoryStructure import Repository
+from repostructure import Contributor
+from repostructure import File
+from repostructure import Package
+from repostructure import Repository
 
 # Extension / statistics configuration
-from Config import Extensions, Stats, CommentsRegExp, Ignore
+from config import Extensions, Stats, CommentsRegExp, Ignore
 
-# Parse the repository once to generate appropriate file structure
-# Tactic: bottom-up (infer from methods => files => packages)
-repoName = 'spring-framework'
-branch = 'master'
-loc = 'https://github.com/spring-projects/' + repoName
+args = sys.argv
+source = 'https://github.com/ishepard/pydriller'
+timeframe = 6
+branch = None
+filename = "report.json"
 
-repo = Repository(repoName, {}, [])         # Root package structure
-repo.process_repository(loc, branch)        # Process the given repository
+# Check if there are extra parameters and parse as necessary
+if(len(args) > 1):
+    i = 1
+    while i < len(args):
+        if args[i] == '-t':
+            timeframe = args[i+1]
+            i += 2
+        elif args[i] == '-b':
+            branch = args[i+1]
+            i += 2
+
+# Process the repository using 'Repository' helper methods
+repo_name = source.split("\\")[len(source.split("\\")) - 1]
+repo = Repository(repo_name, {}, [])        # Root node
+repo.process_repository(source, branch, timeframe)     # Process the given repository
 
 repo.infer_state()
-repo.removeEmptyFolders()
-repo.computeRoles()
+repo.remove_empty_folders()
+repo.compute_roles()
 
 # Write output to file
 fl = open("report_" + repoName + ".json", "w")
