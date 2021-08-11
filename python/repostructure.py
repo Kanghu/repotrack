@@ -106,7 +106,7 @@ class Contributor:
         # e.g classes created, class restructuring, method signature restructuring
 
     # Return a JSON stringified representation of this object
-    def to_json(self):
+    def to_JSON(self):
         return json.dumps(self.__dict__)
 
 # Files represent leaf nodes within our tree repository. These are the only nodes that are "properly" affected
@@ -138,7 +138,7 @@ class File:
         jsonStr += '\"contributors\"' + ':' + '['   
         i = 0
         for c in self.contributors:
-            jsonStr += self.contributors[c].to_json() 
+            jsonStr += self.contributors[c].to_JSON() 
             if i != len(self.contributors) - 1:
                 jsonStr += ','
             i += 1
@@ -270,7 +270,7 @@ class Package:
             return
 
     # Recursively check for and remove empty folders
-    def remove_empty_Folders(self):
+    def remove_empty_folders(self):
         if len(self.childs) == 0:
             return True
         else:
@@ -374,7 +374,7 @@ class Package:
         jsonStr += '\"contributors\"' + ':' + '['   
         i = 0
         for c in self.contributors:
-            jsonStr += self.contributors[c].to_json() 
+            jsonStr += self.contributors[c].to_JSON() 
             if i != len(self.contributors) - 1:
                 jsonStr += ','
             i += 1
@@ -383,7 +383,7 @@ class Package:
         # JSON stringify children recursively
         jsonStr += '\"children\"' + ':' + '['   
         for i in range(0, len(self.childs)):
-            jsonStr += self.childs[i].to_json() 
+            jsonStr += self.childs[i].to_JSON() 
             if i != len(self.childs) - 1:
                 jsonStr += ','
             i += 1
