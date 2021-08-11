@@ -17,15 +17,22 @@ from repostructure import Repository
 # Extension / statistics configuration
 from config import Extensions, Stats, CommentsRegExp, Ignore
 
+DEFAULT_TIMEFRAME = 6
+
+# Default parameters
 args = sys.argv
+timeframe = DEFAULT_TIMEFRAME
 source = 'https://github.com/ishepard/pydriller'
-timeframe = 6
 branch = None
 filename = "report.json"
 
-# Check if there are extra parameters and parse as necessary
+# Check if appropriate parameters are present
 if(len(args) > 1):
-    i = 1
+    # Extract location
+    source = args[1]
+
+    # Parse additional arguments
+    i = 2
     while i < len(args):
         if args[i] == '-t':
             timeframe = args[i+1]
@@ -33,17 +40,35 @@ if(len(args) > 1):
         elif args[i] == '-b':
             branch = args[i+1]
             i += 2
+else:
+    print("\nRepotrack may be called as \npython repotrack <loc> -t <timeframe> -b <branch>")
+    print("\nWhere: \n<loc> represents the repositories' location (URL or local directory)")
+    print("\n<timeframe> is the number of months for which we consider contributions as recent")
+    print("\n<branch> is the branch of interest")
+    exit()
+
+print(source)
+print(timeframe)
+print(branch)
 
 # Process the repository using 'Repository' helper methods
-repo_name = source.split("\\")[len(source.split("\\")) - 1]
-repo = Repository(repo_name, {}, [])        # Root node
+repo_name = source.split("/")[len(source.split("/")) - 1]
+repo = Repository(repo_name, {}, [])                   # Root node
 repo.process_repository(source, branch, timeframe)     # Process the given repository
 
+# Recursively infer the state (metrics) of packages 
 repo.infer_state()
+
+# Remove empty folders from the repository 
+# (i.e. leftover folders from moving files)
 repo.remove_empty_folders()
+
+# (OPTIONAL) Compute aggregate metrics. 
+# This is not necessarily required as the 
+# frontend aggregates its own values.
 repo.compute_roles()
 
 # Write output to file
-fl = open("report_" + repoName + ".json", "w")
-fl.write(repo.toJSON()) 
+fl = open("report_" + repo_name + ".json", "w")
+fl.write(repo.to_JSON()) 
 fl.close()
