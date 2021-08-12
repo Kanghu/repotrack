@@ -15,6 +15,9 @@ from config import Extensions, Stats, CommentsRegExp, Ignore, Backend, Frontend,
 # Ease access to pytz' UTC converter
 utc = pytz.UTC
 
+# Default recent timeframe if unspecified
+DEFAULT_TIMEFRAME = 6
+
 # Compares two method lists and returns a tuple T(#methods_added, #methods_removed)
 # where 'methods_added' represents the set of methods present within the second list but not within the first
 # and 'methods_removed' represents the set of methods present within the first list but not within the second
@@ -59,7 +62,10 @@ class Contributor:
 
     # Update this contributor's metrics according to a modification authored by it.
     # We maintain a separate contribution map for the past 'recent_months' (set by default to 6).
-    def add_modification(self, modif, commit, recent_months=6):
+    def add_modification(self, modif, commit, recent_months=None):
+        if recent_months == None:
+            recent_months = DEFAULT_TIMEFRAME
+        
         isRecent = commit.author_date > utc.localize(datetime.datetime.now() - datetime.timedelta(days=recent_months * 30))
         if isRecent:
             self.extract_metrics(modif, self.contrib_recent)
@@ -119,12 +125,12 @@ class File:
         self.contributors["All"] = Contributor("All", {})
 
     # Add contributions from a modification that has affected this file
-    def add_modification(self, modif, commit):
+    def add_modification(self, modif, commit, recent_months=None):
         if(commit.author.name not in self.contributors):
             self.contributors[commit.author.name] = Contributor(commit.author.name, {})
         
-        self.contributors[commit.author.name].add_modification(modif, commit)
-        self.contributors['All'].add_modification(modif, commit)
+        self.contributors[commit.author.name].add_modification(modif, commit, recent_months)
+        self.contributors['All'].add_modification(modif, commit, recent_months)
 
     # Add a Contributor object to this file's known contributor list
     def add_contributor(self, contrib):
@@ -168,9 +174,8 @@ class Package:
         root = self
         for p in parts[0 : len(parts) - 1]:
             root = root.get_child_by_name(p)
-
-        if root is None:
-            return None
+            if root is None:
+                return None
 
         for c in root.childs:
             if c.name == parts[len(parts) - 1]:
@@ -179,7 +184,7 @@ class Package:
         return None
 
     # Add a modification to this package (affected file will be found recursively)
-    def add_modification(self, modif, commit):
+    def add_modification(self, modif, commit, recent_months=None):
         parts = modif.new_path.split("\\")
 
         root = self
@@ -191,7 +196,7 @@ class Package:
                     raise ValueError("\nRoot is none: " + modif.new_path )
 
         if type(root) is File:
-            root.add_modification(modif, commit)
+            root.add_modification(modif, commit, recent_months)
         else:
             raise ValueError(parts[len(parts) - 1] + " not found in- " + modif.new_path)
 
@@ -401,36 +406,36 @@ class Repository(Package):
     # Process a git repository from a given location (URL / local file)
     # Additional arguments specify the branch and timeframe of interest
     # If a branch is not given, the main one will be taken as default
-    def process_repository(self, loc, branch=None, recent_months=6):
+    def process_repository(self, loc, branch=None, timeframe=6):
         if branch is None:
-            self.process_commits(RepositoryMining(loc).traverse_commits(), only_in_main_branch=True)
+            self.process_commits(RepositoryMining(loc).traverse_commits(), only_in_main_branch=True, recent_months=timeframe)
         else:
-            self.process_commits(RepositoryMining(loc, only_in_branch=branch).traverse_commits())
+            self.process_commits(RepositoryMining(loc, only_in_branch='origin/' + branch).traverse_commits(), recent_months=timeframe)
 
     # Process a given list of commits into a fully fledged Repository object
-    def process_commits(self, commits, only_in_main_branch=False):
+    def process_commits(self, commits, only_in_main_branch=False, recent_months=None):
         for commit in commits:
             if only_in_main_branch == True and commit.in_main_branch == False:
                 continue
 
             print("Processing commit " + commit.hash)
             for modif in commit.modifications:
-                self.process_modif(modif, commit)
+                self.process_modif(modif, commit, recent_months)
 
     # Process a single modification by collecting all its associated contributions & updating
     # the project's structure accordingly (e.g. structural changes such as file addition or deletion)
-    def process_modif(self, modif, commit):
+    def process_modif(self, modif, commit, recent_months=None):
          old_path = modif.old_path
          path = modif.new_path
          change = modif.change_type
 
          if change is ModificationType.ADD:
              self.add_child(path)
-             self.add_modification(modif, commit)
+             self.add_modification(modif, commit, recent_months)
          elif change is ModificationType.DELETE:
              self.remove_child(modif.old_path)
          elif change is ModificationType.MODIFY:
              if self.get_child_by_path(path) is not None:
-                 self.add_modification(modif, commit)
+                 self.add_modification(modif, commit, recent_months)
          elif change is ModificationType.RENAME:
             self.rename_child(old_path, path)

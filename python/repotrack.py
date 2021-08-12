@@ -17,11 +17,9 @@ from repostructure import Repository
 # Extension / statistics configuration
 from config import Extensions, Stats, CommentsRegExp, Ignore
 
-DEFAULT_TIMEFRAME = 6
-
 # Default parameters
 args = sys.argv
-timeframe = DEFAULT_TIMEFRAME
+timeframe = None
 source = 'https://github.com/ishepard/pydriller'
 branch = None
 filename = "report.json"
@@ -35,21 +33,18 @@ if(len(args) > 1):
     i = 2
     while i < len(args):
         if args[i] == '-t':
-            timeframe = args[i+1]
+            timeframe = int(args[i+1])
             i += 2
         elif args[i] == '-b':
             branch = args[i+1]
             i += 2
 else:
-    print("\nRepotrack may be called as \npython repotrack <loc> -t <timeframe> -b <branch>")
+    # No arguments specified => Provide execution information
+    print("\nRepotrack may be called as \n\"python repotrack <loc> -t <timeframe> -b <branch>\"")
     print("\nWhere: \n<loc> represents the repositories' location (URL or local directory)")
     print("\n<timeframe> is the number of months for which we consider contributions as recent")
     print("\n<branch> is the branch of interest")
     exit()
-
-print(source)
-print(timeframe)
-print(branch)
 
 # Process the repository using 'Repository' helper methods
 repo_name = source.split("/")[len(source.split("/")) - 1]
