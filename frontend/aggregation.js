@@ -101,3 +101,19 @@ function computePackageStats(node) {
 		console.log(avg)
 		return avg
 }
+
+
+/** This part computes contribution distribution among leaf nodes for analyzing purposes **/
+function computeLeafDistribution() {
+		// Obtain the list of all leaves
+		var leaves = tree.nodes(root)
+		leaves = leaves.filter(function(d) {
+			return d.children == null;
+		});
+		
+		// Append to master object
+		var master = new Object()
+		master.children = leaves
+		master.contributors = root.contributors
+		computePackageStats(master)
+}

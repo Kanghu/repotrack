@@ -43,18 +43,6 @@ function init_DOM() {
 						// Update the root to create the tree itself
 						update(root);
 
-						/** This part computes contribution distribution among leaf nodes **/
-						// Obtain the list of all leaves
-						var leaves = tree.nodes(root)
-						leaves = leaves.filter(function(d) {
-							return d.children == null;
-						});
-						// Append to master object
-						var master = new Object()
-						master.children = leaves
-						master.contributors = root.contributors
-						computePackageStats(master)
-
 						var nodes = tree.nodes(root)
 						var width = tree.nodeSize()[0] * nodes.length;
 						var height = tree.nodeSize()[1] * nodes.length;
